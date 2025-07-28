@@ -11,12 +11,14 @@ export const useFormLogic = () => {
     // Load logs from localStorage on mount
     useEffect(() => {
         const savedLogs = getFromStorage(STORAGE_KEY, []);
+        console.log('Loading logs from storage:', savedLogs); // Debug log
         setLogs(savedLogs);
     }, []);
 
     // Save logs to localStorage whenever logs change
     useEffect(() => {
-        if (logs.length >= 0) {
+        if (logs.length >= 0) { // This condition is always true, even for empty array
+            console.log('Saving logs to storage:', logs); // Debug log
             saveToStorage(STORAGE_KEY, logs);
         }
     }, [logs]);
@@ -24,12 +26,23 @@ export const useFormLogic = () => {
     const getInitialFormData = () => {
         const now = new Date();
         return {
+            camera: '',
+            roll: 1,
+            take: 1,
             scene: '',
-            take: '',
-            camera: 'A',
+            shot: '',
+            slate: '',
             lens: '',
+            filter: '',
+            lut: '',
+            fStop: '',
+            shutter: '',
+            iso: '',
+            whiteBalance: '5600K',
+            user: '',
             notes: '',
             circled: false,
+            clips: 1,
             timestamp: formatTimestamp(now),
             timecode: formatTimecode(now)
         };
@@ -42,10 +55,11 @@ export const useFormLogic = () => {
                 setLogs(prevLogs =>
                     prevLogs.map(log =>
                         log.id === editId
-                            ? { ...formData, id: editId }
+                            ? { ...formData, id: editId, updatedAt: new Date().toISOString() }
                             : log
                     )
                 );
+                console.log('Updated log with ID:', editId);
             } else {
                 // Create new log
                 const newLog = {
@@ -54,6 +68,7 @@ export const useFormLogic = () => {
                     createdAt: new Date().toISOString()
                 };
                 setLogs(prevLogs => [...prevLogs, newLog]);
+                console.log('Created new log:', newLog);
             }
             return true;
         } catch (error) {
@@ -64,10 +79,18 @@ export const useFormLogic = () => {
 
     const deleteLog = (id) => {
         setLogs(prevLogs => prevLogs.filter(log => log.id !== id));
+        console.log('Deleted log with ID:', id);
     };
 
     const getLogById = (id) => {
         return logs.find(log => log.id === id);
+    };
+
+    // Clear all logs (useful for debugging)
+    const clearAllLogs = () => {
+        setLogs([]);
+        saveToStorage(STORAGE_KEY, []);
+        console.log('Cleared all logs');
     };
 
     return {
@@ -79,6 +102,7 @@ export const useFormLogic = () => {
         getInitialFormData,
         saveLog,
         deleteLog,
-        getLogById
+        getLogById,
+        clearAllLogs // Export for debugging
     };
 };

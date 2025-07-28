@@ -106,37 +106,122 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
         return null;
     };
 
+    const scrollToField = (fieldName) => {
+        // Convert field name to a valid DOM selector
+        const element = document.querySelector(`[name="${fieldName}"], [data-field="${fieldName}"]`);
+        if (element) {
+            element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            element.focus();
+        }
+    };
+
     const handleSubmit = async () => {
         setSaving(true);
 
-        // Validate all fields
-        const fieldsToValidate = [
+        // Mark all fields as touched to show errors
+        const allFields = [
             FORM_FIELDS.CAMERA,
             FORM_FIELDS.ROLL,
             FORM_FIELDS.TAKE,
             FORM_FIELDS.TIMECODE,
             FORM_FIELDS.ISO,
             FORM_FIELDS.USER,
-            FORM_FIELDS.NOTES
+            FORM_FIELDS.NOTES,
+            FORM_FIELDS.LENS,
+            FORM_FIELDS.FILTER,
+            FORM_FIELDS.LUT,
+            FORM_FIELDS.F_STOP,
+            FORM_FIELDS.SHUTTER,
+            FORM_FIELDS.WHITE_BALANCE,
+            FORM_FIELDS.SCENE,
+            FORM_FIELDS.SHOT,
+            FORM_FIELDS.SLATE
         ];
 
-        let hasErrors = false;
         const newTouched = {};
+        const newErrors = {};
+        let firstErrorField = null;
 
-        fieldsToValidate.forEach(field => {
+        // Validate all fields and collect errors
+        allFields.forEach(field => {
             newTouched[field] = true;
-            if (!validateField(field, formData[field])) {
-                hasErrors = true;
+
+            // Run validation for each field
+            const fieldValue = formData[field];
+            let hasError = false;
+
+            switch (field) {
+                case FORM_FIELDS.CAMERA:
+                    if (!fieldValue) {
+                        newErrors[field] = 'Camera is required';
+                        hasError = true;
+                    }
+                    break;
+                case FORM_FIELDS.ROLL:
+                    if (!fieldValue || fieldValue < 1) {
+                        newErrors[field] = 'Roll number must be at least 1';
+                        hasError = true;
+                    }
+                    break;
+                case FORM_FIELDS.TAKE:
+                    if (!fieldValue || fieldValue < 1) {
+                        newErrors[field] = 'Take number must be at least 1';
+                        hasError = true;
+                    }
+                    break;
+                case FORM_FIELDS.TIMECODE:
+                    if (fieldValue && !/^\d{2}:\d{2}:\d{2}:\d{2}$/.test(fieldValue)) {
+                        newErrors[field] = 'Format should be HH:MM:SS:FF';
+                        hasError = true;
+                    }
+                    break;
+                case FORM_FIELDS.ISO:
+                    if (fieldValue && (fieldValue < 100 || fieldValue > 6400)) {
+                        newErrors[field] = 'ISO should be between 100 and 6400';
+                        hasError = true;
+                    }
+                    break;
+                case FORM_FIELDS.USER:
+                    if (fieldValue && fieldValue.length > 3) {
+                        newErrors[field] = 'Maximum 3 characters';
+                        hasError = true;
+                    }
+                    break;
+                case FORM_FIELDS.NOTES:
+                    if (fieldValue && fieldValue.length > 500) {
+                        newErrors[field] = 'Maximum 500 characters';
+                        hasError = true;
+                    }
+                    break;
+            }
+
+            // Track the first error field for scrolling
+            if (hasError && !firstErrorField) {
+                firstErrorField = field;
             }
         });
 
         setTouched(newTouched);
+        setErrors(newErrors);
 
-        if (hasErrors) {
+        // If there are errors, scroll to first error and stop
+        if (Object.keys(newErrors).length > 0) {
             setSaving(false);
+
+            // Scroll to first error field after a short delay to let state update
+            setTimeout(() => {
+                if (firstErrorField) {
+                    scrollToField(firstErrorField);
+                }
+            }, 100);
+
             return;
         }
 
+        // No errors, proceed with save
         const success = onSave(formData);
 
         if (success) {
@@ -175,6 +260,8 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                     Camera *
                                 </label>
                                 <select
+                                    name={FORM_FIELDS.CAMERA}
+                                    data-field={FORM_FIELDS.CAMERA}
                                     value={formData.camera}
                                     onChange={(e) => handleInputChange(FORM_FIELDS.CAMERA, e.target.value)}
                                     onBlur={() => handleBlur(FORM_FIELDS.CAMERA)}
@@ -195,6 +282,8 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                         Roll *
                                     </label>
                                     <input
+                                        name={FORM_FIELDS.ROLL}
+                                        data-field={FORM_FIELDS.ROLL}
                                         type="number"
                                         value={formData.roll}
                                         onChange={(e) => handleInputChange(FORM_FIELDS.ROLL, parseInt(e.target.value) || 1)}
@@ -211,6 +300,8 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                         Take *
                                     </label>
                                     <input
+                                        name={FORM_FIELDS.TAKE}
+                                        data-field={FORM_FIELDS.TAKE}
                                         type="number"
                                         value={formData.take}
                                         onChange={(e) => handleInputChange(FORM_FIELDS.TAKE, parseInt(e.target.value) || 1)}
@@ -278,13 +369,15 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                 <select
                                     value={formData.lens}
                                     onChange={(e) => handleInputChange(FORM_FIELDS.LENS, e.target.value)}
-                                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                    onBlur={() => handleBlur(FORM_FIELDS.LENS)}
+                                    className={getInputClassName(FORM_FIELDS.LENS)}
                                 >
                                     <option value="">Select Lens</option>
                                     {LENS_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
+                                {renderFieldError(FORM_FIELDS.LENS)}
                             </div>
 
                             <div>
@@ -294,12 +387,14 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                 <select
                                     value={formData.filter}
                                     onChange={(e) => handleInputChange(FORM_FIELDS.FILTER, e.target.value)}
-                                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                    onBlur={() => handleBlur(FORM_FIELDS.FILTER)}
+                                    className={getInputClassName(FORM_FIELDS.FILTER)}
                                 >
                                     {FILTER_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
+                                {renderFieldError(FORM_FIELDS.FILTER)}
                             </div>
 
                             <div>
@@ -309,13 +404,15 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                 <select
                                     value={formData.lut}
                                     onChange={(e) => handleInputChange(FORM_FIELDS.LUT, e.target.value)}
-                                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                    onBlur={() => handleBlur(FORM_FIELDS.LUT)}
+                                    className={getInputClassName(FORM_FIELDS.LUT)}
                                 >
                                     <option value="">Select LUT</option>
                                     {LUT_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
+                                {renderFieldError(FORM_FIELDS.LUT)}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -326,13 +423,15 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                     <select
                                         value={formData.fStop}
                                         onChange={(e) => handleInputChange(FORM_FIELDS.F_STOP, e.target.value)}
-                                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                        onBlur={() => handleBlur(FORM_FIELDS.F_STOP)}
+                                        className={getInputClassName(FORM_FIELDS.F_STOP)}
                                     >
                                         <option value="">Select F-Stop</option>
                                         {F_STOP_OPTIONS.map(option => (
                                             <option key={option} value={option}>{option}</option>
                                         ))}
                                     </select>
+                                    {renderFieldError(FORM_FIELDS.F_STOP)}
                                 </div>
 
                                 <div>
@@ -342,13 +441,15 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                     <select
                                         value={formData.shutter}
                                         onChange={(e) => handleInputChange(FORM_FIELDS.SHUTTER, e.target.value)}
-                                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                        onBlur={() => handleBlur(FORM_FIELDS.SHUTTER)}
+                                        className={getInputClassName(FORM_FIELDS.SHUTTER)}
                                     >
                                         <option value="">Select Shutter</option>
                                         {SHUTTER_OPTIONS.map(option => (
                                             <option key={option} value={option}>{option}</option>
                                         ))}
                                     </select>
+                                    {renderFieldError(FORM_FIELDS.SHUTTER)}
                                 </div>
                             </div>
 
@@ -379,12 +480,14 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                 <select
                                     value={formData.whiteBalance}
                                     onChange={(e) => handleInputChange(FORM_FIELDS.WHITE_BALANCE, e.target.value)}
-                                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                    onBlur={() => handleBlur(FORM_FIELDS.WHITE_BALANCE)}
+                                    className={getInputClassName(FORM_FIELDS.WHITE_BALANCE)}
                                 >
                                     {WB_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
+                                {renderFieldError(FORM_FIELDS.WHITE_BALANCE)}
                             </div>
 
                             <div>
@@ -414,9 +517,11 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                     type="text"
                                     value={formData.scene}
                                     onChange={(e) => handleInputChange(FORM_FIELDS.SCENE, e.target.value)}
-                                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                    onBlur={() => handleBlur(FORM_FIELDS.SCENE)}
+                                    className={getInputClassName(FORM_FIELDS.SCENE)}
                                     placeholder="e.g., 12"
                                 />
+                                {renderFieldError(FORM_FIELDS.SCENE)}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -428,9 +533,11 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                         type="text"
                                         value={formData.shot}
                                         onChange={(e) => handleInputChange(FORM_FIELDS.SHOT, e.target.value)}
-                                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                        onBlur={() => handleBlur(FORM_FIELDS.SHOT)}
+                                        className={getInputClassName(FORM_FIELDS.SHOT)}
                                         placeholder="e.g., B"
                                     />
+                                    {renderFieldError(FORM_FIELDS.SHOT)}
                                 </div>
 
                                 <div>
@@ -441,9 +548,11 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                         type="text"
                                         value={formData.slate}
                                         onChange={(e) => handleInputChange(FORM_FIELDS.SLATE, e.target.value)}
-                                        className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                                        onBlur={() => handleBlur(FORM_FIELDS.SLATE)}
+                                        className={getInputClassName(FORM_FIELDS.SLATE)}
                                         placeholder="e.g., 3"
                                     />
+                                    {renderFieldError(FORM_FIELDS.SLATE)}
                                 </div>
                             </div>
                         </div>
