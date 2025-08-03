@@ -24,13 +24,13 @@
   ],
   "screenshots": [
     {
-      "src": "log_tall.png",
+      "src": "narrow.png",
       "type": "image/png",
       "sizes": "390x844",
       "form_factor": "narrow"
     },
     {
-      "src": "log_small.png",
+      "src": "wide.png",
       "type": "image/png",
       "sizes": "1024x768",
       "form_factor": "wide"
