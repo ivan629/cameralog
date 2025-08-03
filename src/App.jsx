@@ -3,6 +3,7 @@ import { useFormLogic } from './useHook';
 import { CameraLogForm } from './CameraLogForm';
 import { LogDisplay } from './components';
 import { Film, Plus, Share2, X, Check } from 'lucide-react';
+import { ExportButton} from './components/ExportToPdf';
 
 const App = () => {
     const { logs, showForm, setShowForm, getInitialFormData, saveLog, editingLog, setEditingLog } = useFormLogic();
@@ -64,49 +65,6 @@ const App = () => {
 
     const deselectAllLogs = () => {
         setSelectedLogs(new Set());
-    };
-
-    const handleShare = async () => {
-        const logsToShare = selectionMode
-            ? logs.filter(log => selectedLogs.has(log.id))
-            : logs;
-
-        const shareData = {
-            title: 'Omar Log',
-            text: `I have ${logsToShare.length} camera log${logsToShare.length !== 1 ? 's' : ''} recorded`,
-            url: window.location.href
-        };
-
-        if (navigator.share && navigator.canShare(shareData)) {
-            try {
-                await navigator.share(shareData);
-                if (selectionMode) {
-                    exitSelectionMode();
-                }
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    console.log('Error sharing:', err);
-                    fallbackShare(logsToShare.length);
-                }
-            }
-        } else {
-            fallbackShare(logsToShare.length);
-        }
-    };
-
-    const fallbackShare = (count) => {
-        const url = window.location.href;
-        navigator.clipboard.writeText(url).then(() => {
-            alert(`Link copied to clipboard! (${count} log${count !== 1 ? 's' : ''})`);
-            if (selectionMode) {
-                exitSelectionMode();
-            }
-        }).catch(() => {
-            prompt('Copy this link:', url);
-            if (selectionMode) {
-                exitSelectionMode();
-            }
-        });
     };
 
     const selectedCount = selectedLogs.size;
@@ -202,7 +160,10 @@ const App = () => {
                             Select logs
                         </button>
                         <button
-                            onClick={handleShare}
+                            onClick={() => {
+                                enterSelectionMode();
+                                selectAllLogs();
+                            }}
                             className="bg-blue-50 active:bg-blue-100 text-blue-700 px-6 py-2.5 rounded-full flex items-center gap-2 text-sm font-medium transition-colors"
                             aria-label="Share all logs"
                         >
@@ -217,8 +178,10 @@ const App = () => {
             {selectionMode && (
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3">
                     <div className="flex justify-center">
-                        <button
-                            onClick={handleShare}
+                        <ExportButton
+                            logs={selectionMode
+                                ? logs.filter(log => selectedLogs.has(log.id))
+                                : logs}
                             disabled={selectedCount === 0}
                             className={`px-6 py-2.5 rounded-full flex items-center gap-2 text-sm font-medium transition-colors ${
                                 selectedCount > 0
@@ -229,7 +192,7 @@ const App = () => {
                         >
                             <Share2 className="w-4 h-4" />
                             Share {selectedCount > 0 ? selectedCount : ''} selected
-                        </button>
+                        </ExportButton>
                     </div>
                 </div>
             )}
