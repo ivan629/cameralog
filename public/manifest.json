@@ -22,6 +22,20 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/390x844/2563eb/ffffff?text=Omar+Camera+Log",
+      "type": "image/png",
+      "sizes": "390x844",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://via.placeholder.com/1024x768/2563eb/ffffff?text=Omar+Camera+Log+Desktop",
+      "type": "image/png",
+      "sizes": "1024x768",
+      "form_factor": "wide"
+    }
+  ],
   "start_url": "/",
   "id": "/",
   "display": "standalone",
