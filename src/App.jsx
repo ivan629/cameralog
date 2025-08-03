@@ -37,7 +37,7 @@ const App = () => {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Film className="w-5 h-5 text-blue-600" />
-                            <h1 className="text-lg font-medium text-gray-900">CameraLog</h1>
+                            <h1 className="text-lg font-medium text-gray-900">Omar Log</h1>
                         </div>
 
                         <button
