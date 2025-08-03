@@ -1,14 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFormLogic } from './useHook';
 import { CameraLogForm } from './CameraLogForm';
 import { LogDisplay } from './components';
-import { Film, Plus, Share2, X, Check } from 'lucide-react';
-import { ExportButton} from './components/ExportToPdf';
+import { Film, Plus, Share2, X, Check, Download } from 'lucide-react';
+import { ExportButton } from './components/ExportToPdf';
 
 const App = () => {
     const { logs, showForm, setShowForm, getInitialFormData, saveLog, editingLog, setEditingLog } = useFormLogic();
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedLogs, setSelectedLogs] = useState(new Set());
+
+    // PWA Install functionality
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [showInstallButton, setShowInstallButton] = useState(false);
+    const [isInstalled, setIsInstalled] = useState(false);
+
+    useEffect(() => {
+        // Check if app is already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            setIsInstalled(true);
+        }
+
+        const handleBeforeInstallPrompt = (e) => {
+            console.log('Install prompt available');
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setShowInstallButton(true);
+        };
+
+        const handleAppInstalled = () => {
+            console.log('App was installed');
+            setIsInstalled(true);
+            setShowInstallButton(false);
+            setDeferredPrompt(null);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.addEventListener('appinstalled', handleAppInstalled);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener('appinstalled', handleAppInstalled);
+        };
+    }, []);
+
+    const handleInstall = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`Install prompt result: ${outcome}`);
+
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+                setShowInstallButton(false);
+            }
+        }
+    };
 
     const handleAddRecord = () => {
         setEditingLog(null);
@@ -83,23 +130,36 @@ const App = () => {
                             </h1>
                         </div>
 
-                        {selectionMode ? (
-                            <button
-                                onClick={exitSelectionMode}
-                                className="bg-gray-100 active:bg-gray-200 text-gray-700 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                                aria-label="Exit selection mode"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleAddRecord}
-                                className="bg-blue-600 active:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                                aria-label="Add new record"
-                            >
-                                <Plus className="w-5 h-5" />
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {/* Install App Button */}
+                            {showInstallButton && !isInstalled && (
+                                <button
+                                    onClick={handleInstall}
+                                    className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
+                                >
+                                    <Download className="w-3 h-3" />
+                                    Install
+                                </button>
+                            )}
+
+                            {selectionMode ? (
+                                <button
+                                    onClick={exitSelectionMode}
+                                    className="bg-gray-100 active:bg-gray-200 text-gray-700 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="Exit selection mode"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleAddRecord}
+                                    className="bg-blue-600 active:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="Add new record"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -115,8 +175,8 @@ const App = () => {
                             {allSelected ? 'Deselect all' : 'Select all'}
                         </button>
                         <span className="text-gray-600">
-                {selectedCount} of {logs.length} selected
-            </span>
+                            {selectedCount} of {logs.length} selected
+                        </span>
                     </div>
                 </div>
             )}
@@ -182,17 +242,12 @@ const App = () => {
                             logs={selectionMode
                                 ? logs.filter(log => selectedLogs.has(log.id))
                                 : logs}
-                            disabled={selectedCount === 0}
                             className={`px-6 py-2.5 rounded-full flex items-center gap-2 text-sm font-medium transition-colors ${
                                 selectedCount > 0
                                     ? 'bg-blue-600 active:bg-blue-700 text-white'
                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}
-                            aria-label={`Share ${selectedCount} selected logs`}
-                        >
-                            <Share2 className="w-4 h-4" />
-                            Share {selectedCount > 0 ? selectedCount : ''} selected
-                        </ExportButton>
+                        />
                     </div>
                 </div>
             )}
