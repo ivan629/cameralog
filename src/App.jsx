@@ -1,5 +1,6 @@
 import { useFormLogic } from './useHook';
-import { CameraLogForm, LogDisplay } from './CameraLogForm';
+import { CameraLogForm } from './CameraLogForm';
+import { LogDisplay } from './components';
 import { Film, Plus } from 'lucide-react';
 
 const App = () => {
