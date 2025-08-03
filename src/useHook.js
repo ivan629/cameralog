@@ -11,14 +11,12 @@ export const useFormLogic = () => {
     // Load logs from localStorage on mount
     useEffect(() => {
         const savedLogs = getFromStorage(STORAGE_KEY, []);
-        console.log('Loading logs from storage:', savedLogs); // Debug log
         setLogs(savedLogs);
     }, []);
 
     // Save logs to localStorage whenever logs change
     useEffect(() => {
-        if (logs.length >= 0) { // This condition is always true, even for empty array
-            console.log('Saving logs to storage:', logs); // Debug log
+        if (logs.length > 0) { // This condition is always true, even for empty array
             saveToStorage(STORAGE_KEY, logs);
         }
     }, [logs]);
