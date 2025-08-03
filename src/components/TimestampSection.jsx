@@ -1,4 +1,3 @@
-
 import {FORM_FIELDS} from "../constants";
 import {FormInput} from "./FormInput";
 
@@ -29,8 +28,12 @@ export const TimestampSection = ({ formData, errors, touched, handleInputChange,
                 name={FORM_FIELDS.CLIPS}
                 type="number"
                 value={formData.clips}
-                onChange={(e) => handleInputChange(FORM_FIELDS.CLIPS, parseInt(e.target.value) || 1)}
+                onChange={(e) => handleInputChange(FORM_FIELDS.CLIPS, e.target.value)}
+                onBlur={() => handleBlur(FORM_FIELDS.CLIPS)}
+                error={errors[FORM_FIELDS.CLIPS]}
+                touched={touched[FORM_FIELDS.CLIPS]}
                 min="1"
+                inputMode="numeric"
             />
         </div>
     </div>

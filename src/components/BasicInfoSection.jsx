@@ -23,8 +23,9 @@ export const BasicInfoSection = ({ formData, errors, touched, handleInputChange,
                 label="Roll"
                 name={FORM_FIELDS.ROLL}
                 type="number"
+                placeholder={FORM_FIELDS.ROLL}
                 value={formData.roll}
-                onChange={(e) => handleInputChange(FORM_FIELDS.ROLL, parseInt(e.target.value) || 1)}
+                onChange={(e) => handleInputChange(FORM_FIELDS.ROLL, e.target.value)}
                 onBlur={() => handleBlur(FORM_FIELDS.ROLL)}
                 error={errors[FORM_FIELDS.ROLL]}
                 touched={touched[FORM_FIELDS.ROLL]}
@@ -37,7 +38,8 @@ export const BasicInfoSection = ({ formData, errors, touched, handleInputChange,
                 name={FORM_FIELDS.TAKE}
                 type="number"
                 value={formData.take}
-                onChange={(e) => handleInputChange(FORM_FIELDS.TAKE, parseInt(e.target.value) || 1)}
+                placeholder={FORM_FIELDS.TAKE}
+                onChange={(e) => handleInputChange(FORM_FIELDS.TAKE, e.target.value)}
                 onBlur={() => handleBlur(FORM_FIELDS.TAKE)}
                 error={errors[FORM_FIELDS.TAKE]}
                 touched={touched[FORM_FIELDS.TAKE]}

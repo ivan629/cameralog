@@ -27,8 +27,8 @@ export const useFormLogic = () => {
         const now = new Date();
         return {
             camera: '',
-            roll: 1,
-            take: 1,
+            roll: '',
+            take: '',
             scene: '',
             shot: '',
             slate: '',

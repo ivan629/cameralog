@@ -1,4 +1,3 @@
-// Basic Input Component
 export const FormInput = ({ label, name, type = "text", value, onChange, onBlur, error, touched, required, className, ...props }) => {
     const getInputClassName = () => {
         const baseClass = "w-full px-3 py-3 border rounded-lg focus:outline-none focus:ring-2 text-base";
@@ -8,6 +7,16 @@ export const FormInput = ({ label, name, type = "text", value, onChange, onBlur,
             return `${baseClass} border-red-300 focus:ring-red-500 focus:border-red-500`;
         }
         return `${baseClass} border-gray-300 focus:ring-blue-500`;
+    };
+
+    const handleChange = (e) => {
+        if (type === "number") {
+            // For number inputs, pass the raw string value to allow empty strings
+            // The parent component should handle the conversion
+            onChange(e);
+        } else {
+            onChange(e);
+        }
     };
 
     return (
@@ -20,7 +29,7 @@ export const FormInput = ({ label, name, type = "text", value, onChange, onBlur,
                 data-field={name}
                 type={type}
                 value={value}
-                onChange={onChange}
+                onChange={handleChange}
                 onBlur={onBlur}
                 className={getInputClassName()}
                 required={required}
