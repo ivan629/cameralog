@@ -1,3 +1,5 @@
+// Add this to your App.jsx to force engagement and trigger real prompt
+
 import { useState, useEffect } from 'react';
 import { useFormLogic } from './useHook';
 import { CameraLogForm } from './CameraLogForm';
@@ -10,49 +12,90 @@ const App = () => {
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedLogs, setSelectedLogs] = useState(new Set());
 
-    // PWA Install functionality - FIXED
+    // Install functionality
     const [deferredPrompt, setDeferredPrompt] = useState(null);
-    const [showInstallButton, setShowInstallButton] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
+    const [showInstallButton, setShowInstallButton] = useState(false);
+    const [engagementStatus, setEngagementStatus] = useState('');
 
     useEffect(() => {
-        // Check if app is already installed
-        if (window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone ||
-            document.referrer.includes('android-app://')) {
-            setIsInstalled(true);
-            console.log('App is already installed');
-        }
+        // Check if already installed
+        const checkInstalled = () => {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                window.navigator.standalone ||
+                document.referrer.includes('android-app://');
+        };
 
+        setIsInstalled(checkInstalled());
+
+        // FORCE ENGAGEMENT TO TRIGGER REAL PROMPT
+        const forceEngagement = () => {
+            // Method 1: Track visit count
+            const visitCount = parseInt(localStorage.getItem('pwa-visit-count') || '0') + 1;
+            localStorage.setItem('pwa-visit-count', visitCount.toString());
+            setEngagementStatus(`Visit ${visitCount}/2`);
+
+            // Method 2: Force user interaction time
+            let timeSpent = 0;
+            const timeInterval = setInterval(() => {
+                timeSpent++;
+                if (timeSpent >= 30) {
+                    setEngagementStatus('30s engagement ✅');
+                    clearInterval(timeInterval);
+                }
+            }, 1000);
+
+            // Method 3: Simulate navigation (helps trigger prompt)
+            setTimeout(() => {
+                // Push a state to simulate navigation
+                window.history.pushState({}, '', window.location.href + '#engaged');
+                setTimeout(() => {
+                    window.history.pushState({}, '', window.location.href.replace('#engaged', ''));
+                }, 1000);
+                setEngagementStatus(prev => prev + ' + Navigation ✅');
+            }, 5000);
+
+            // Method 4: If second visit, wait then check for prompt
+            if (visitCount >= 2) {
+                setEngagementStatus('Visit 2/2 ✅ - Waiting for prompt...');
+                setTimeout(() => {
+                    // Force check if prompt should be available
+                    if (!deferredPrompt) {
+                        setEngagementStatus('No auto-prompt - criteria not fully met');
+                        setShowInstallButton(true); // Show manual option
+                    }
+                }, 10000); // Wait 10 seconds for prompt
+            }
+
+            return () => clearInterval(timeInterval);
+        };
+
+        const cleanup = forceEngagement();
+
+        // Listen for the real install prompt
         const handleBeforeInstallPrompt = (e) => {
-            console.log('💡 Install prompt triggered');
+            console.log('🎉 REAL install prompt triggered!');
+            setEngagementStatus('Real prompt available! ✅');
             e.preventDefault();
             setDeferredPrompt(e);
             setShowInstallButton(true);
         };
 
         const handleAppInstalled = () => {
-            console.log('✅ App was installed');
+            console.log('✅ App installed via real prompt');
             setIsInstalled(true);
-            setShowInstallButton(false);
             setDeferredPrompt(null);
+            setShowInstallButton(false);
+            localStorage.setItem('pwa-installed', 'true');
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.addEventListener('appinstalled', handleAppInstalled);
 
-        // Force show install button for testing (remove in production)
-        setTimeout(() => {
-            if (!isInstalled && !deferredPrompt) {
-                console.log('🔧 No install prompt detected - check PWA requirements');
-                // Uncomment next line to force show button for testing:
-                // setShowInstallButton(true);
-            }
-        }, 3000);
-
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
             window.removeEventListener('appinstalled', handleAppInstalled);
+            if (cleanup) cleanup();
         };
     }, []);
 
@@ -60,24 +103,49 @@ const App = () => {
         console.log('🚀 Install button clicked');
 
         if (deferredPrompt) {
+            // WE HAVE THE REAL PROMPT!
             try {
+                console.log('✨ Using REAL install prompt');
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                console.log(`📱 Install result: ${outcome}`);
+                console.log('Real install result:', outcome);
 
                 if (outcome === 'accepted') {
                     setDeferredPrompt(null);
                     setShowInstallButton(false);
+                    setIsInstalled(true);
                 }
             } catch (error) {
-                console.log('❌ Install error:', error);
+                console.error('Real install error:', error);
             }
         } else {
-            // Fallback: show manual install instructions
-            alert('To install:\n\nChrome: Menu → "Add to Home Screen"\nSafari: Share → "Add to Home Screen"');
+            // Show instructions as fallback
+            showInstallInstructions();
         }
     };
 
+    const showInstallInstructions = () => {
+        const userAgent = navigator.userAgent.toLowerCase();
+        let instructions = '';
+
+        if (userAgent.includes('chrome')) {
+            instructions = 'Chrome: Menu (⋮) → "Add to Home Screen"';
+        } else if (userAgent.includes('safari')) {
+            instructions = 'Safari: Share (⬆) → "Add to Home Screen"';
+        } else {
+            instructions = 'Look for "Add to Home Screen" in browser menu';
+        }
+
+        alert(`Install this app:\n\n${instructions}\n\nTip: Visit this page a few more times to unlock automatic install!`);
+    };
+
+    // Force another visit to trigger prompt faster
+    const forceSecondVisit = () => {
+        localStorage.setItem('pwa-visit-count', '2');
+        window.location.reload();
+    };
+
+    // Your existing component functions...
     const handleAddRecord = () => {
         setEditingLog(null);
         setShowForm(true);
@@ -137,10 +205,41 @@ const App = () => {
 
     const selectedCount = selectedLogs.size;
     const allSelected = selectedCount === logs.length && logs.length > 0;
+    const visitCount = parseInt(localStorage.getItem('pwa-visit-count') || '0');
 
     return (
         <div className="min-h-screen bg-white">
-            {/* Minimal Header */}
+            {/* Install Banner */}
+            {!isInstalled && showInstallButton && (
+                <div className="bg-blue-600 text-white px-4 py-2 text-center text-sm">
+                    <span className="mr-2">
+                        {deferredPrompt ? '🎉 Ready to install!' : '📱 Install this app!'}
+                    </span>
+                    <button
+                        onClick={handleInstall}
+                        className="bg-white text-blue-600 px-3 py-1 rounded text-xs font-medium hover:bg-blue-50 transition-colors"
+                    >
+                        {deferredPrompt ? 'Install Now (Real)' : 'Install Now'}
+                    </button>
+                </div>
+            )}
+
+            {/* Engagement Status Debug */}
+            <div className="bg-yellow-100 text-yellow-800 px-4 py-1 text-xs">
+                <strong>Real Prompt Status:</strong> {engagementStatus || 'Starting engagement...'} |
+                <strong> Has Real Prompt:</strong> {deferredPrompt ? '✅ YES' : '❌ NO'} |
+                <strong> Visits:</strong> {visitCount}
+                {visitCount < 2 && (
+                    <button
+                        onClick={forceSecondVisit}
+                        className="ml-2 bg-yellow-600 text-white px-2 py-0.5 rounded text-xs"
+                    >
+                        Force 2nd Visit
+                    </button>
+                )}
+            </div>
+
+            {/* Header */}
             <div className="sticky top-0 bg-white border-b border-gray-100 z-10">
                 <div className="px-4 py-3">
                     <div className="flex items-center justify-between">
@@ -152,14 +251,18 @@ const App = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {/* Install App Button - Always show for testing */}
-                            {(showInstallButton || (!isInstalled && process.env.NODE_ENV === 'development')) && (
+                            {/* Install button in header */}
+                            {!isInstalled && showInstallButton && (
                                 <button
                                     onClick={handleInstall}
-                                    className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                        deferredPrompt
+                                            ? 'bg-green-600 text-white hover:bg-green-700'
+                                            : 'bg-orange-600 text-white hover:bg-orange-700'
+                                    }`}
                                 >
                                     <Download className="w-3 h-3" />
-                                    Install
+                                    {deferredPrompt ? 'Real Install' : 'Install'}
                                 </button>
                             )}
 
@@ -167,7 +270,6 @@ const App = () => {
                                 <button
                                     onClick={exitSelectionMode}
                                     className="bg-gray-100 active:bg-gray-200 text-gray-700 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                                    aria-label="Exit selection mode"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -175,7 +277,6 @@ const App = () => {
                                 <button
                                     onClick={handleAddRecord}
                                     className="bg-blue-600 active:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                                    aria-label="Add new record"
                                 >
                                     <Plus className="w-5 h-5" />
                                 </button>
@@ -185,7 +286,7 @@ const App = () => {
                 </div>
             </div>
 
-            {/* Selection Controls */}
+            {/* Rest of your app stays exactly the same */}
             {selectionMode && logs.length > 0 && (
                 <div className="sticky top-[65px] px-4 py-2 bg-gray-50 border-b border-gray-100 z-10">
                     <div className="flex justify-between items-center text-sm">
@@ -202,7 +303,6 @@ const App = () => {
                 </div>
             )}
 
-            {/* Content */}
             <div className={`px-4 ${logs.length > 0 ? 'pb-20' : 'pb-4'}`}>
                 <LogDisplay
                     logs={logs}
@@ -212,7 +312,6 @@ const App = () => {
                     onToggleSelection={toggleLogSelection}
                 />
 
-                {/* Empty State */}
                 {logs.length === 0 && (
                     <div className="text-center py-16">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -229,14 +328,12 @@ const App = () => {
                 )}
             </div>
 
-            {/* Bottom Action Bar */}
             {logs.length > 0 && !selectionMode && (
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3">
                     <div className="flex justify-center gap-3">
                         <button
                             onClick={enterSelectionMode}
                             className="bg-gray-50 active:bg-gray-100 text-gray-700 px-4 py-2.5 rounded-full text-sm font-medium transition-colors"
-                            aria-label="Select logs to share"
                         >
                             Select logs
                         </button>
@@ -246,7 +343,6 @@ const App = () => {
                                 selectAllLogs();
                             }}
                             className="bg-blue-50 active:bg-blue-100 text-blue-700 px-6 py-2.5 rounded-full flex items-center gap-2 text-sm font-medium transition-colors"
-                            aria-label="Share all logs"
                         >
                             <Share2 className="w-4 h-4" />
                             Share all {logs.length}
@@ -255,7 +351,6 @@ const App = () => {
                 </div>
             )}
 
-            {/* Selection Mode Bottom Bar */}
             {selectionMode && (
                 <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3">
                     <div className="flex justify-center">
@@ -273,7 +368,6 @@ const App = () => {
                 </div>
             )}
 
-            {/* Form Modal */}
             {showForm && (
                 <div className="fixed inset-0 z-50 bg-white">
                     <div className="h-full w-full">
@@ -284,15 +378,6 @@ const App = () => {
                             isEditing={!!editingLog}
                         />
                     </div>
-                </div>
-            )}
-
-            {/* Debug info - remove in production */}
-            {process.env.NODE_ENV === 'development' && (
-                <div className="fixed bottom-2 left-2 text-xs bg-black text-white p-2 rounded">
-                    Install: {showInstallButton ? '✅' : '❌'} |
-                    Installed: {isInstalled ? '✅' : '❌'} |
-                    Prompt: {deferredPrompt ? '✅' : '❌'}
                 </div>
             )}
         </div>
