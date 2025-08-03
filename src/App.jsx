@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { useFormLogic } from './useHook';
 import { CameraLogForm } from './CameraLogForm';
 import { LogDisplay } from './components';
-import { Film, Plus } from 'lucide-react';
+import { Film, Plus, Share2, X, Check } from 'lucide-react';
 
 const App = () => {
     const { logs, showForm, setShowForm, getInitialFormData, saveLog, editingLog, setEditingLog } = useFormLogic();
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedLogs, setSelectedLogs] = useState(new Set());
 
     const handleAddRecord = () => {
         setEditingLog(null);
@@ -12,8 +15,12 @@ const App = () => {
     };
 
     const handleEditRecord = (log) => {
-        setEditingLog(log);
-        setShowForm(true);
+        if (selectionMode) {
+            toggleLogSelection(log.id);
+        } else {
+            setEditingLog(log);
+            setShowForm(true);
+        }
     };
 
     const handleSaveLog = (formData) => {
@@ -30,6 +37,81 @@ const App = () => {
         setEditingLog(null);
     };
 
+    const enterSelectionMode = () => {
+        setSelectionMode(true);
+        setSelectedLogs(new Set());
+    };
+
+    const exitSelectionMode = () => {
+        setSelectionMode(false);
+        setSelectedLogs(new Set());
+    };
+
+    const toggleLogSelection = (logId) => {
+        const newSelected = new Set(selectedLogs);
+        if (newSelected.has(logId)) {
+            newSelected.delete(logId);
+        } else {
+            newSelected.add(logId);
+        }
+        setSelectedLogs(newSelected);
+    };
+
+    const selectAllLogs = () => {
+        const allLogIds = new Set(logs.map(log => log.id));
+        setSelectedLogs(allLogIds);
+    };
+
+    const deselectAllLogs = () => {
+        setSelectedLogs(new Set());
+    };
+
+    const handleShare = async () => {
+        const logsToShare = selectionMode
+            ? logs.filter(log => selectedLogs.has(log.id))
+            : logs;
+
+        const shareData = {
+            title: 'Omar Log',
+            text: `I have ${logsToShare.length} camera log${logsToShare.length !== 1 ? 's' : ''} recorded`,
+            url: window.location.href
+        };
+
+        if (navigator.share && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+                if (selectionMode) {
+                    exitSelectionMode();
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.log('Error sharing:', err);
+                    fallbackShare(logsToShare.length);
+                }
+            }
+        } else {
+            fallbackShare(logsToShare.length);
+        }
+    };
+
+    const fallbackShare = (count) => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+            alert(`Link copied to clipboard! (${count} log${count !== 1 ? 's' : ''})`);
+            if (selectionMode) {
+                exitSelectionMode();
+            }
+        }).catch(() => {
+            prompt('Copy this link:', url);
+            if (selectionMode) {
+                exitSelectionMode();
+            }
+        });
+    };
+
+    const selectedCount = selectedLogs.size;
+    const allSelected = selectedCount === logs.length && logs.length > 0;
+
     return (
         <div className="min-h-screen bg-white">
             {/* Minimal Header */}
@@ -38,23 +120,58 @@ const App = () => {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Film className="w-5 h-5 text-blue-600" />
-                            <h1 className="text-lg font-medium text-gray-900">Omar Log</h1>
+                            <h1 className="text-lg font-medium text-gray-900">
+                                {selectionMode ? `${selectedCount} selected` : 'Omar Log'}
+                            </h1>
                         </div>
 
-                        <button
-                            onClick={handleAddRecord}
-                            className="bg-blue-600 active:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Add new record"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </button>
+                        {selectionMode ? (
+                            <button
+                                onClick={exitSelectionMode}
+                                className="bg-gray-100 active:bg-gray-200 text-gray-700 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                                aria-label="Exit selection mode"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleAddRecord}
+                                className="bg-blue-600 active:bg-blue-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                                aria-label="Add new record"
+                            >
+                                <Plus className="w-5 h-5" />
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
 
+            {/* Selection Controls */}
+            {selectionMode && logs.length > 0 && (
+                <div className="sticky top-[65px] px-4 py-2 bg-gray-50 border-b border-gray-100 z-10">
+                    <div className="flex justify-between items-center text-sm">
+                        <button
+                            onClick={allSelected ? deselectAllLogs : selectAllLogs}
+                            className="text-blue-600 active:text-blue-700 font-medium"
+                        >
+                            {allSelected ? 'Deselect all' : 'Select all'}
+                        </button>
+                        <span className="text-gray-600">
+                {selectedCount} of {logs.length} selected
+            </span>
+                    </div>
+                </div>
+            )}
+
             {/* Content */}
-            <div className="px-4">
-                <LogDisplay logs={logs} onEditRecord={handleEditRecord} />
+            <div className={`px-4 ${logs.length > 0 ? 'pb-20' : 'pb-4'}`}>
+                <LogDisplay
+                    logs={logs}
+                    onEditRecord={handleEditRecord}
+                    selectionMode={selectionMode}
+                    selectedLogs={selectedLogs}
+                    onToggleSelection={toggleLogSelection}
+                />
 
                 {/* Empty State */}
                 {logs.length === 0 && (
@@ -72,6 +189,50 @@ const App = () => {
                     </div>
                 )}
             </div>
+
+            {/* Bottom Action Bar */}
+            {logs.length > 0 && !selectionMode && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3">
+                    <div className="flex justify-center gap-3">
+                        <button
+                            onClick={enterSelectionMode}
+                            className="bg-gray-50 active:bg-gray-100 text-gray-700 px-4 py-2.5 rounded-full text-sm font-medium transition-colors"
+                            aria-label="Select logs to share"
+                        >
+                            Select logs
+                        </button>
+                        <button
+                            onClick={handleShare}
+                            className="bg-blue-50 active:bg-blue-100 text-blue-700 px-6 py-2.5 rounded-full flex items-center gap-2 text-sm font-medium transition-colors"
+                            aria-label="Share all logs"
+                        >
+                            <Share2 className="w-4 h-4" />
+                            Share all {logs.length}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Selection Mode Bottom Bar */}
+            {selectionMode && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3">
+                    <div className="flex justify-center">
+                        <button
+                            onClick={handleShare}
+                            disabled={selectedCount === 0}
+                            className={`px-6 py-2.5 rounded-full flex items-center gap-2 text-sm font-medium transition-colors ${
+                                selectedCount > 0
+                                    ? 'bg-blue-600 active:bg-blue-700 text-white'
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                            aria-label={`Share ${selectedCount} selected logs`}
+                        >
+                            <Share2 className="w-4 h-4" />
+                            Share {selectedCount > 0 ? selectedCount : ''} selected
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Form Modal */}
             {showForm && (

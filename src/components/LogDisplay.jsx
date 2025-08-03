@@ -1,4 +1,4 @@
-import { Camera, Clock, Calendar } from "lucide-react";
+import { Camera, Clock, Calendar, Check } from "lucide-react";
 
 // Helper function to format dates in a user-friendly way
 const formatLogDate = (dateString) => {
@@ -96,8 +96,22 @@ const getTimeInfo = (log) => {
     return null;
 };
 
-export const LogDisplay = ({ logs, onEditRecord }) => {
+export const LogDisplay = ({
+                               logs,
+                               onEditRecord,
+                               selectionMode = false,
+                               selectedLogs = new Set(),
+                               onToggleSelection = () => {}
+                           }) => {
     if (logs.length === 0) return null;
+
+    const handleLogClick = (log) => {
+        if (selectionMode) {
+            onToggleSelection(log.id);
+        } else {
+            onEditRecord(log);
+        }
+    };
 
     return (
         <div className="py-4 space-y-3">
@@ -105,14 +119,36 @@ export const LogDisplay = ({ logs, onEditRecord }) => {
                 const relativeDate = formatLogDate(log.createdAt || log.timestamp);
                 const fullDate = getFullDate(log.createdAt || log.timestamp);
                 const timeInfo = getTimeInfo(log);
+                const isSelected = selectedLogs.has(log.id);
 
                 return (
                     <div
                         key={log.id}
-                        onClick={() => onEditRecord(log)}
-                        className="bg-white border border-gray-200 rounded-lg p-4 active:bg-gray-50 transition-colors cursor-pointer hover:shadow-md"
+                        onClick={() => handleLogClick(log)}
+                        className={`bg-white border rounded-lg p-4 active:bg-gray-50 transition-colors cursor-pointer hover:shadow-md ${
+                            selectionMode
+                                ? isSelected
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200'
+                                : 'border-gray-200'
+                        }`}
                     >
                         <div className="flex items-start justify-between">
+                            {/* Selection Checkbox */}
+                            {selectionMode && (
+                                <div className="mr-3 mt-1">
+                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                        isSelected
+                                            ? 'bg-blue-600 border-blue-600'
+                                            : 'border-gray-300 bg-white'
+                                    }`}>
+                                        {isSelected && (
+                                            <Check className="w-3 h-3 text-white" />
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex-1">
                                 {/* Header with Scene/Take and Date */}
                                 <div className="flex items-center justify-between mb-2">
@@ -177,87 +213,6 @@ export const LogDisplay = ({ logs, onEditRecord }) => {
                     </div>
                 );
             })}
-        </div>
-    );
-};
-
-// Alternative: Compact version with date prominently displayed
-export const CompactLogDisplay = ({ logs, onEditRecord }) => {
-    if (logs.length === 0) return null;
-
-    // Group logs by date
-    const groupedLogs = logs.reduce((groups, log) => {
-        const date = log.createdAt || log.timestamp;
-        const dateKey = date ? new Date(date).toDateString() : 'Unknown Date';
-
-        if (!groups[dateKey]) {
-            groups[dateKey] = [];
-        }
-        groups[dateKey].push(log);
-        return groups;
-    }, {});
-
-    return (
-        <div className="py-4 space-y-6">
-            {Object.entries(groupedLogs).map(([dateKey, logsForDate]) => (
-                <div key={dateKey}>
-                    {/* Date Header */}
-                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                        <Calendar className="w-4 h-4 text-gray-500" />
-                        <h3 className="text-sm font-medium text-gray-700">
-                            {dateKey === new Date().toDateString() ? 'Today' :
-                                dateKey === new Date(Date.now() - 86400000).toDateString() ? 'Yesterday' :
-                                    dateKey !== 'Unknown Date' ? new Date(dateKey).toLocaleDateString('en-US', {
-                                        weekday: 'long', month: 'long', day: 'numeric'
-                                    }) : 'Unknown Date'}
-                        </h3>
-                        <span className="text-xs text-gray-500">
-                            {logsForDate.length} log{logsForDate.length !== 1 ? 's' : ''}
-                        </span>
-                    </div>
-
-                    {/* Logs for this date */}
-                    <div className="space-y-2">
-                        {logsForDate.map((log) => {
-                            const timeInfo = getTimeInfo(log);
-
-                            return (
-                                <div
-                                    key={log.id}
-                                    onClick={() => onEditRecord(log)}
-                                    className="bg-white border border-gray-200 rounded-lg p-3 active:bg-gray-50 transition-colors cursor-pointer hover:shadow-sm"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-sm font-medium text-gray-900">
-                                                    S{log.scene || '?'}-T{log.take || '?'}
-                                                </span>
-                                                {log.circled && (
-                                                    <span className="text-green-600 text-xs">⭕</span>
-                                                )}
-                                                {timeInfo && (
-                                                    <span className="text-xs text-gray-500">
-                                                        {timeInfo}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="text-xs text-gray-500">
-                                                {log.camera || 'No camera'}
-                                                {log.lens && ` • ${log.lens}`}
-                                                {log.roll && ` • Roll ${log.roll}`}
-                                            </div>
-                                        </div>
-
-                                        <Camera className="w-4 h-4 text-gray-400 ml-2 flex-shrink-0" />
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            ))}
         </div>
     );
 };

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@react-pdf/renderer": "^4.3.0",
     "cra-template-pwa": "2.0.0",
+    "html2pdf.js": "^0.10.3",
     "lucide-react": "^0.532.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
