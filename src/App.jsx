@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useFormLogic } from './useHook';
 import { CameraLogForm } from './CameraLogForm';
 import { LogDisplay } from './components';
-import { Film, Plus, Share2, X, Check, Download } from 'lucide-react';
+import { Film, Plus, Share2, X, Download } from 'lucide-react';
 import { ExportButton } from './components/ExportToPdf';
 
 const App = () => {
@@ -10,26 +10,29 @@ const App = () => {
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedLogs, setSelectedLogs] = useState(new Set());
 
-    // PWA Install functionality
+    // PWA Install functionality - FIXED
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
 
     useEffect(() => {
         // Check if app is already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
+        if (window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone ||
+            document.referrer.includes('android-app://')) {
             setIsInstalled(true);
+            console.log('App is already installed');
         }
 
         const handleBeforeInstallPrompt = (e) => {
-            console.log('Install prompt available');
+            console.log('💡 Install prompt triggered');
             e.preventDefault();
             setDeferredPrompt(e);
             setShowInstallButton(true);
         };
 
         const handleAppInstalled = () => {
-            console.log('App was installed');
+            console.log('✅ App was installed');
             setIsInstalled(true);
             setShowInstallButton(false);
             setDeferredPrompt(null);
@@ -38,6 +41,15 @@ const App = () => {
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.addEventListener('appinstalled', handleAppInstalled);
 
+        // Force show install button for testing (remove in production)
+        setTimeout(() => {
+            if (!isInstalled && !deferredPrompt) {
+                console.log('🔧 No install prompt detected - check PWA requirements');
+                // Uncomment next line to force show button for testing:
+                // setShowInstallButton(true);
+            }
+        }, 3000);
+
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
             window.removeEventListener('appinstalled', handleAppInstalled);
@@ -45,15 +57,24 @@ const App = () => {
     }, []);
 
     const handleInstall = async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`Install prompt result: ${outcome}`);
+        console.log('🚀 Install button clicked');
 
-            if (outcome === 'accepted') {
-                setDeferredPrompt(null);
-                setShowInstallButton(false);
+        if (deferredPrompt) {
+            try {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`📱 Install result: ${outcome}`);
+
+                if (outcome === 'accepted') {
+                    setDeferredPrompt(null);
+                    setShowInstallButton(false);
+                }
+            } catch (error) {
+                console.log('❌ Install error:', error);
             }
+        } else {
+            // Fallback: show manual install instructions
+            alert('To install:\n\nChrome: Menu → "Add to Home Screen"\nSafari: Share → "Add to Home Screen"');
         }
     };
 
@@ -131,8 +152,8 @@ const App = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {/* Install App Button */}
-                            {showInstallButton && !isInstalled && (
+                            {/* Install App Button - Always show for testing */}
+                            {(showInstallButton || (!isInstalled && process.env.NODE_ENV === 'development')) && (
                                 <button
                                     onClick={handleInstall}
                                     className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
@@ -263,6 +284,15 @@ const App = () => {
                             isEditing={!!editingLog}
                         />
                     </div>
+                </div>
+            )}
+
+            {/* Debug info - remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+                <div className="fixed bottom-2 left-2 text-xs bg-black text-white p-2 rounded">
+                    Install: {showInstallButton ? '✅' : '❌'} |
+                    Installed: {isInstalled ? '✅' : '❌'} |
+                    Prompt: {deferredPrompt ? '✅' : '❌'}
                 </div>
             )}
         </div>
