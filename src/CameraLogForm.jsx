@@ -252,17 +252,24 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
             window.visualViewport.addEventListener('resize', handleVisualViewportChange);
         }
 
-        // Prevent zoom on input focus for iOS
+        // Prevent zoom on input focus for iOS and disable horizontal scrolling
         const viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
             viewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
         }
+
+        // Prevent horizontal scrolling on the document
+        document.body.style.overflowX = 'hidden';
+        document.documentElement.style.overflowX = 'hidden';
 
         return () => {
             window.removeEventListener('resize', handleResize);
             if (window.visualViewport) {
                 window.visualViewport.removeEventListener('resize', handleVisualViewportChange);
             }
+            // Reset overflow when component unmounts
+            document.body.style.overflowX = '';
+            document.documentElement.style.overflowX = '';
         };
     }, []);
 
@@ -379,20 +386,25 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
 
     return (
         <div
-            className="fixed inset-0 z-50 bg-white flex flex-col"
-            style={{ height: `${viewportHeight}px` }}
+            className="fixed inset-0 z-50 bg-white flex flex-col w-full overflow-hidden"
+            style={{
+                height: `${viewportHeight}px`,
+                maxWidth: '100vw'
+            }}
         >
             {/* Header - Fixed height */}
-            <div className="flex-shrink-0 px-4 py-3 border-b border-gray-100 bg-white">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                            <Film className="w-5 h-5" />
-                            {isEditing ? 'Edit Log' : 'New Log'}
+            <div className="flex-shrink-0 px-4 py-3 border-b border-gray-100 bg-white w-full">
+                <div className="flex items-center justify-between w-full max-w-full">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2 truncate">
+                            <Film className="w-5 h-5 flex-shrink-0" />
+                            <span className="truncate">
+                                {isEditing ? 'Edit Log' : 'New Log'}
+                            </span>
                         </h2>
 
                         {Object.keys(touched).length > 0 && (
-                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                                 validationSummary.isValid
                                     ? 'bg-green-100 text-green-700'
                                     : 'bg-yellow-100 text-yellow-700'
@@ -400,14 +412,16 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                                 <div className={`w-2 h-2 rounded-full ${
                                     validationSummary.isValid ? 'bg-green-500' : 'bg-yellow-500'
                                 }`} />
-                                {validationSummary.isValid ? 'Valid' : `${validationSummary.errorCount} error${validationSummary.errorCount !== 1 ? 's' : ''}`}
+                                <span className="whitespace-nowrap">
+                                    {validationSummary.isValid ? 'Valid' : `${validationSummary.errorCount} error${validationSummary.errorCount !== 1 ? 's' : ''}`}
+                                </span>
                             </div>
                         )}
                     </div>
 
                     <button
                         onClick={onCancel}
-                        className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                        className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors flex-shrink-0 ml-2"
                     >
                         ×
                     </button>
@@ -415,9 +429,9 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
             </div>
 
             {/* Scrollable Content - Takes remaining space minus bottom section */}
-            <div className="flex-1 overflow-y-auto overscroll-contain" style={{ paddingBottom: '120px' }}>
-                <div className="px-4 py-6">
-                    <div className="space-y-6">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain w-full" style={{ paddingBottom: '120px' }}>
+                <div className="px-4 py-6 w-full max-w-full">
+                    <div className="space-y-6 w-full">
                         <BasicInfoSection
                             formData={formData}
                             errors={errors}
@@ -470,11 +484,11 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
             </div>
 
             {/* Fixed Bottom Actions - Always visible */}
-            <div className="flex-shrink-0 absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg">
+            <div className="flex-shrink-0 absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg w-full">
                 {/* Validation Error Summary */}
                 {validationSummary.hasErrors && Object.keys(touched).length > 0 && (
-                    <div className="px-4 pt-3 pb-2">
-                        <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="px-4 pt-3 pb-2 w-full">
+                        <div className="p-2 bg-red-50 border border-red-200 rounded-lg w-full">
                             <div className="text-sm text-red-700 font-medium">
                                 Please fix {validationSummary.errorCount} error{validationSummary.errorCount !== 1 ? 's' : ''} before saving
                             </div>
@@ -486,12 +500,12 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                 )}
 
                 {/* Action Buttons */}
-                <div className="px-4 py-3">
-                    <div className="flex gap-3">
+                <div className="px-4 py-3 w-full">
+                    <div className="flex gap-3 w-full">
                         <button
                             type="button"
                             onClick={onCancel}
-                            className="flex-1 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors active:bg-gray-100"
+                            className="flex-1 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors active:bg-gray-100 min-w-0"
                         >
                             Cancel
                         </button>
@@ -499,16 +513,18 @@ export const CameraLogForm = ({ initialData, onSave, onCancel, isEditing }) => {
                             type="button"
                             onClick={handleSubmit}
                             disabled={saving || (validationSummary.hasErrors && Object.keys(touched).length > 0)}
-                            className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-blue-700 active:bg-blue-800 transition-colors"
+                            className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-blue-700 active:bg-blue-800 transition-colors min-w-0"
                         >
-                            <Save className="w-4 h-4" />
-                            {saving ? 'Saving...' : 'Save Log'}
+                            <Save className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">
+                                {saving ? 'Saving...' : 'Save Log'}
+                            </span>
                         </button>
                     </div>
                 </div>
 
                 {/* Safe area for phones with home indicators */}
-                <div className="h-safe-area-inset-bottom bg-white"></div>
+                <div className="h-safe-area-inset-bottom bg-white w-full"></div>
             </div>
         </div>
     );
