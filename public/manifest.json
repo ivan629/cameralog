@@ -24,13 +24,13 @@
   ],
   "screenshots": [
     {
-      "src": "https://via.placeholder.com/390x844/2563eb/ffffff?text=Omar+Camera+Log",
+      "src": "log_tall.png",
       "type": "image/png",
       "sizes": "390x844",
       "form_factor": "narrow"
     },
     {
-      "src": "https://via.placeholder.com/1024x768/2563eb/ffffff?text=Omar+Camera+Log+Desktop",
+      "src": "log_small.png",
       "type": "image/png",
       "sizes": "1024x768",
       "form_factor": "wide"
